@@ -1,0 +1,20 @@
+with filtered_order as ( 
+	select order_id, order_purchase_timestamp
+	from olist_orders_dataset
+	where order_status not in ('unavailable','canceled')
+), 
+order_payments as (
+	select fo.order_purchase_timestamp, opd.payment_value
+	from filtered_order as fo
+	JOIN olist_order_payments_dataset AS opd on fo.order_id = opd.order_id
+)
+select EXTRACT(YEAR from order_purchase_timestamp::timestamp) as sales_year,
+	EXTRACT(month from order_purchase_timestamp::timestamp) as sales_month,
+	SUM(payment_value) AS total_revenue
+from order_payments
+group by
+sales_year, 
+sales_month
+ORDER BY
+  sales_year, 
+sales_month;
