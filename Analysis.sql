@@ -141,3 +141,45 @@ FROM
   ranked_products
 WHERE
   rnk <= 3;
+
+
+-- Q6 : What is the share of high-value customers compared to general customers?
+with
+  customer_rfm_raw as (
+    select
+      co.customer_unique_id,
+      max(od.order_purchase_timestamp::date) as last_purchase_date,
+      sum(op.payment_value) as monetary,
+      count(distinct od.order_id) as frequency
+    from
+      olist_customers_dataset AS co
+      join olist_orders_dataset AS od ON co.customer_id = od.customer_id
+      join olist_order_payments_dataset AS op ON od.order_id = op.order_id
+    where
+      od.order_status not in ('unavailable', 'canceled')
+    group by co.customer_unique_id
+  ),
+  customer_rfm_scores as (
+    select
+      *,
+     NTILE(5) over (order by last_purchase_date desc) as r_score,
+     NTILE(5) over (order by frequency desc) as f_score,
+     NTILE(5) over (order by monetary  desc) as m_score
+    from
+      customer_rfm_raw
+  )
+select
+  *,
+  r_score || '' || f_score || '' || m_score AS rfm_score,
+  case
+    when r_score >= 4 AND f_score >= 4 THEN 'VIP'
+    when r_score >= 4 AND f_score < 4 THEN 'New / Promising'
+    when r_score < 3 AND f_score >= 4 THEN 'At-Risk Customers'
+    when r_score < 3 AND f_score < 3 THEN 'Lost Customers'
+    else 'Others'
+  end as customer_segment
+from
+  customer_rfm_scores
+order by
+  r_score desc,
+  f_score desc; 
