@@ -92,3 +92,52 @@ ORDER BY
   customer_state,
   sales_year,
   sales_month;
+
+
+-- Q4 What is Top 5 Payment type ?
+select pd.payment_type, 
+	count(*) as total_transactions
+	from olist_order_payments_dataset as pd
+	join olist_orders_dataset as od on od.order_id  = pd.order_id
+	where order_status not in ('unavailable','canceled')
+	group by 
+	pd.payment_type
+	order by
+  	total_transactions desc
+	limit 5;
+
+-- Q5 What is Top product per catagory ?
+WITH
+  product_revenue AS (
+    SELECT
+      pd.product_id,
+      pd.product_category_name,
+      SUM(odt.price) AS total_revenue,
+      odt.seller_id
+    FROM
+      olist_products_dataset AS pd
+      JOIN olist_order_items_dataset AS odt ON pd.product_id = odt.product_id
+      JOIN olist_orders_dataset AS od ON od.order_id = odt.order_id
+    WHERE
+      od.order_status NOT IN ('unavailable', 'canceled')
+    GROUP BY
+      pd.product_id,
+      pd.product_category_name,
+      odt.seller_id
+  ),
+  ranked_products AS (
+    SELECT
+      *,
+      ROW_NUMBER() OVER (
+        PARTITION BY product_category_name
+        ORDER BY total_revenue DESC
+      ) AS rnk
+    FROM
+      product_revenue
+  )
+SELECT
+  *
+FROM
+  ranked_products
+WHERE
+  rnk <= 3;
