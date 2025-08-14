@@ -25,9 +25,13 @@ This analysis seeks to answer key business questions across several domains:
 * How does delivery time correlate with customer review scores?
 * Which seller states are the most efficient at preparing orders for shipment?
 
+# Dataset
+The analysis is based on the Brazilian E-commerce Public Dataset by Olist, which contains information on 100,000 orders from 2016 to 2018.
+
 # Schema Diagram
 <img width="2486" height="1496" alt="Data schema" src="https://github.com/user-attachments/assets/93ca0235-50b0-44eb-816e-a2a44157f47a" />
 
 # Database and Tools
 * DBeaver
 * Postgre SQL
+* BI Tool: Power BI
