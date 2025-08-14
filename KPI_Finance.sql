@@ -59,3 +59,56 @@ SELECT
 FROM
     sales_kpis AS s,
     logistics_kpis AS l;
+
+--## LTV by RFM Segment
+WITH rfm_with_segments AS (
+
+    WITH latest_date AS (
+        SELECT MAX(purchase_timestamp) AS max_date FROM vw_orders_cleaned
+    ),
+    customer_rfm_raw AS (
+        SELECT
+            c.customer_unique_id,
+            (SELECT max_date FROM latest_date) - MAX(o.purchase_timestamp::date) AS recency_days,
+            COUNT(DISTINCT o.order_id) AS frequency,
+            SUM(p.payment_value) AS monetary
+        FROM
+            vw_orders_cleaned AS o
+            JOIN vw_customers_cleaned AS c ON c.customer_id = o.customer_id
+            JOIN vw_olist_payment_cleaned AS p ON p.order_id = o.order_id
+        GROUP BY
+            c.customer_unique_id
+    ),
+    customer_rfm_scores AS (
+        SELECT
+            *,
+            NTILE(5) OVER (ORDER BY recency_days ASC) AS r_score,
+            NTILE(5) OVER (ORDER BY frequency DESC) AS f_score,
+            NTILE(5) OVER (ORDER BY monetary DESC) AS m_score
+        FROM
+            customer_rfm_raw
+    )
+    SELECT
+        *,
+        r_score || '' || f_score || '' || m_score AS rfm_score,
+        CASE
+            WHEN r_score >= 4 AND f_score >= 4 THEN 'VIP'
+            WHEN r_score >= 4 AND f_score < 4 THEN 'New / Promising'
+            WHEN r_score < 3 AND f_score >= 4 THEN 'At-Risk Customers'
+            WHEN r_score < 3 AND f_score < 3 THEN 'Lost Customers'
+            ELSE 'Others'
+        END AS customer_segment
+    FROM
+        customer_rfm_scores
+)
+
+SELECT
+    customer_segment,
+    ROUND(AVG(monetary)::numeric, 2) AS avg_monetary_value,
+    COUNT(*) AS number_of_customers
+FROM
+    rfm_with_segments
+GROUP BY
+    customer_segment
+ORDER BY
+    avg_monetary_value DESC;
