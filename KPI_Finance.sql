@@ -133,3 +133,12 @@ GROUP BY
     c.customer_state
 ORDER BY
     revenue_to_freight_ratio DESC;
+
+--## Order Per Customer Group By Month
+SELECT
+  order_month,
+  customer_id,
+  COUNT(DISTINCT order_id) AS orders
+FROM `steam-form-479809-a3.OlistProject.vw_kpi_base`
+GROUP BY order_month, customer_id
+ORDER BY order_month, customer_id;
