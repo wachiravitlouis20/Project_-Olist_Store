@@ -171,3 +171,36 @@ SELECT
 FROM monthly
 ORDER BY order_month;
 
+--## KPI monthly
+CREATE OR REPLACE VIEW `steam-form-479809-a3`.`OlistProject`.`vw_kpi_monthly`
+AS
+WITH
+  m AS (
+    SELECT
+      order_month,
+      COUNT(DISTINCT order_id) AS orders,
+      SUM(gmv_defined) AS gmv,
+      COUNT(DISTINCT customer_id) AS unique_customers,
+      SAFE_DIVIDE(SUM(freight_sum), SUM(gmv_defined)) AS freight_share,
+      (SUM(price_sum) - SUM(freight_sum)) AS cm_proxy
+    FROM `steam-form-479809-a3`.`OlistProject`.`vw_kpi_base`
+    WHERE order_month >= DATE '2017-06-01' AND order_month < DATE '2017-12-01'
+    GROUP BY order_month
+  )
+SELECT
+  order_month,
+  orders,
+  gmv,
+  SAFE_DIVIDE(gmv, orders) AS aov,
+  unique_customers,
+  freight_share,
+  cm_proxy,
+  SAFE_DIVIDE(cm_proxy, gmv) AS cm_proxy_pct,
+  SAFE_DIVIDE(
+    gmv - LAG(gmv) OVER (ORDER BY order_month),
+    LAG(gmv) OVER (ORDER BY order_month))
+    AS mom_gmv_pct
+FROM `m`
+ORDER BY order_month;
+
+
