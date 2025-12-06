@@ -132,3 +132,42 @@ SELECT
 FROM `steam-form-479809-a3.OlistProject.vw_kpi_base`
 GROUP BY order_month, customer_id
 ORDER BY order_month, customer_id;
+
+--## CM and CM% (Proxy) Monthly
+-- KPI รายเดือน: CM และ CM% (proxy)
+-- ชั้นใน: สรุปยอดต่อเดือน
+WITH monthly AS (
+  SELECT
+    /* TODO: เลือกเดือนจาก order_month ตรงๆ ไม่ใช้ EXTRACT */
+    order_month,
+    SUM(price_sum)   AS sum_price,
+    SUM(freight_sum) AS sum_freight,
+    SUM(gmv_defined) AS sum_gmv
+  FROM `steam-form-479809-a3.OlistProject.vw_kpi_base`
+  WHERE order_month >= DATE '2017-06-01'
+    AND order_month <  DATE '2017-12-01'
+  GROUP BY order_month
+)
+SELECT
+  order_month,
+  sum_price,
+  sum_freight,
+  sum_gmv,
+  (sum_price - sum_freight)                                  AS cm_proxy,
+  ROUND(SAFE_DIVIDE(sum_freight, NULLIF(sum_gmv, 0)),2)               AS freight_share,
+  ROUND(SAFE_DIVIDE((sum_price - sum_freight), NULLIF(sum_gmv, 0)),2) AS cm_proxy_pct
+FROM monthly
+ORDER BY order_month;
+
+----- Cross check cm_proxy_pct ≈ 1 − 2 × freight_share
+SELECT
+  order_month,
+  sum_price,
+  sum_freight,
+  sum_gmv,
+  (sum_price - sum_freight) AS cm_proxy,
+  ROUND(SAFE_DIVIDE(sum_freight, sum_gmv), 4)               AS freight_share,
+  ROUND(SAFE_DIVIDE((sum_price - sum_freight), sum_gmv), 4) AS cm_proxy_pct
+FROM monthly
+ORDER BY order_month;
+
