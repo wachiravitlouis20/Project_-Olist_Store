@@ -203,4 +203,34 @@ SELECT
 FROM `m`
 ORDER BY order_month;
 
+--## GMV Bridge Additive
+-- Bridge ถัดเดือน: แยกส่วน Orders vs AOV
+WITH x AS (
+  SELECT
+    order_month,
+    orders,
+    gmv,
+    SAFE_DIVIDE(gmv, orders) AS aov,
+    LAG(orders) OVER(ORDER BY order_month) AS orders_prev,
+    LAG(gmv)    OVER(ORDER BY order_month) AS gmv_prev,
+    LAG(SAFE_DIVIDE(gmv, orders)) OVER(ORDER BY order_month) AS aov_prev
+  FROM `steam-form-479809-a3.OlistProject.vw_kpi_monthly`
+)
+SELECT
+  order_month,
+  gmv_prev,
+  gmv,
+  -- ส่วนที่มาจากการเปลี่ยนจำนวนออเดอร์ (คูณด้วย AOV ของเดือนก่อน)
+  (orders - orders_prev) * aov_prev                         AS delta_from_orders,
+  -- ส่วนที่มาจากการเปลี่ยน AOV (คูณด้วยจำนวนออเดอร์ของเดือนนี้)
+  orders * (aov - aov_prev)                                 AS delta_from_aov,
+  -- รวมประมาณการการเปลี่ยนแปลง GMV
+  ((orders - orders_prev) * aov_prev) + (orders * (aov - aov_prev)) AS delta_gmv_est,
+  SAFE_DIVIDE(((orders - orders_prev) * aov_prev),
+              NULLIF(((orders - orders_prev) * aov_prev) + (orders * (aov - aov_prev)),0)) AS pct_from_orders,
+  SAFE_DIVIDE((orders * (aov - aov_prev)),
+              NULLIF(((orders - orders_prev) * aov_prev) + (orders * (aov - aov_prev)),0)) AS pct_from_aov
+FROM x
+WHERE orders_prev IS NOT NULL
+ORDER BY order_month;
 
