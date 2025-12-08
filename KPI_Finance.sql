@@ -102,27 +102,6 @@ GROUP BY
 ORDER BY
     avg_monetary_value DESC;
 
--- ## Query: อัตราส่วนรายได้ต่อค่าขนส่ง (Revenue-to-Freight Ratio) แยกตามรัฐ
-SELECT
-    c.customer_state,
-    CASE
-        WHEN SUM(i.freight_value) > 0 THEN
-            ROUND((SUM(i.price) / SUM(i.freight_value))::numeric, 2)
-        ELSE
-            0
-    END AS revenue_to_freight_ratio,
-    ROUND(SUM(i.price)::numeric, 2) AS total_revenue,
-    ROUND(SUM(i.freight_value)::numeric, 2) AS total_freight
-FROM
-    vw_customers_cleaned AS c
-JOIN
-    vw_orders_cleaned AS o ON c.customer_id = o.customer_id
-JOIN
-    vw_order_items_cleaned AS i ON o.order_id = i.order_id
-GROUP BY
-    c.customer_state
-ORDER BY
-    revenue_to_freight_ratio DESC;
 
 --## Order Per Customer Group By Month
 SELECT
