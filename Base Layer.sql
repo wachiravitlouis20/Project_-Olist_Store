@@ -28,3 +28,13 @@ LEFT JOIN payment_rollup pr ON o.order_id = pr.order_id
 LEFT JOIN item_rollup ir ON o.order_id = ir.order_id
 WHERE o.order_status IN ('delivered', 'shipped', 'approved','invoiced')
 ORDER BY o.order_id
+
+
+--## Check Dupicate
+SELECT 
+  order_id,
+  COUNT(*) AS total_orderid
+FROM `steam-form-479809-a3.OlistProject.base_layer`
+GROUP BY order_id
+HAVING total_orderid > 1
+ORDER BY total_orderid DESC
