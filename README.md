@@ -32,6 +32,5 @@ The analysis is based on the Brazilian E-commerce Public Dataset by Olist, which
 <img width="2486" height="1496" alt="Data schema" src="https://github.com/user-attachments/assets/93ca0235-50b0-44eb-816e-a2a44157f47a" />
 
 # Database and Tools
-* DBeaver
-* Postgre SQL
+* Google Cloud
 * BI Tool: Power BI
