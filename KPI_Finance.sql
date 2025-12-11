@@ -1,32 +1,33 @@
 -- ##AOV SQL Query
 -- AOV by primary payment method (credit_card vs boleto)
-WITH pay_primary AS (
-  SELECT order_id, payment_type
-  FROM (
-    SELECT
-      p.order_id,
-      p.payment_type,
-      p.payment_value,
-      ROW_NUMBER() OVER(
-        PARTITION BY p.order_id
-        ORDER BY p.payment_value DESC, p.payment_type
-      ) AS rn
-    FROM `steam-form-479809-a3.OlistProject.vw_olist_payment_cleaned` p
-    WHERE p.payment_type IN ('credit_card','boleto')
+WITH
+  pay_primary AS (
+    SELECT order_id, payment_type
+    FROM
+      (
+        SELECT
+          p.order_id,
+          p.payment_type,
+          p.payment_value,
+          ROW_NUMBER()
+            OVER (
+              PARTITION BY order_id ORDER BY payment_value DESC, p.payment_type
+            )
+            AS rn
+        FROM
+          `steam-form-479809-a3`.`OlistProject`.`vw_olist_payment_cleaned` AS p
+      )
+    WHERE rn = 1
   )
-  WHERE rn = 1  -- เลือกวิธีจ่ายที่มียอดมากสุดเป็น “หลัก” ต่อออเดอร์
-)
 SELECT
   pp.payment_type,
-  COUNT(DISTINCT b.order_id) AS total_orders,
-  SUM(b.gmv_defined)         AS gmv,
-  ROUND(
-    SAFE_DIVIDE(SUM(b.gmv_defined), COUNT(DISTINCT b.order_id))
-  ,2) AS aov  -- นิยาม AOV = GMV / Orders
-FROM `steam-form-479809-a3.OlistProject.vw_kpi_base` b
-JOIN pay_primary pp USING (order_id)
-WHERE b.order_month >= DATE '2017-06-01'
-  AND b.order_month <  DATE '2017-12-01'
+  COUNT(DISTINCT b.order_id) AS total_order,
+  SUM(b.gmv_defined) AS gmv,
+  ROUND(SAFE_DIVIDE(SUM(b.gmv_defined), COUNT(DISTINCT b.order_id)), 2) AS aov
+FROM `steam-form-479809-a3`.`OlistProject`.`vw_kpi_base` AS b
+JOIN `pay_primary` AS pp
+  ON b.order_id = pp.order_id
+WHERE b.order_month >= DATE '2017-06-01' AND b.order_month < DATE '2017-12-01'
 GROUP BY pp.payment_type
 ORDER BY pp.payment_type;
 
