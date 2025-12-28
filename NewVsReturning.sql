@@ -53,3 +53,60 @@ SELECT
 FROM tagged
 GROUP BY order_month
 ORDER BY order_month;
+
+
+
+-- ## New customers By State (Oct/Nov 2017) using customer_unique_id
+WITH base_with_state AS (
+  SELECT
+    c.customer_unique_id,
+    c.customer_state,
+    b.order_id,
+    DATE_TRUNC(DATE(b.order_month),MONTH) AS order_month,
+    GMV_defined, 
+    total_freight_value,
+    total_price
+  FROM `steam-form-479809-a3.OlistProject.base_layer` AS b
+  JOIN `steam-form-479809-a3.OlistProject.vw_customers_cleaned` AS c
+  ON b.customer_id = c.customer_id
+  WHERE b.order_status IN ('delivered','shipped','invoiced','approved')
+),
+first_purchase AS (
+  SELECT
+    customer_unique_id,
+    MIN(order_month) AS first_order_month
+  FROM base_with_state
+  GROUP BY customer_unique_id
+),
+tagged AS(
+  SELECT
+  b.customer_unique_id,
+  b.customer_state,
+  b.order_month,
+  b.order_id,
+  b.GMV_defined,
+  CASE
+    WHEN b.order_month = fp.first_order_month THEN 'NEW'
+    WHEN b.order_month > fp.first_order_month THEN 'RETURNING'
+    ELSE 'UNKNOWN'
+  END AS customer_type
+  FROM base_with_state AS b
+  JOIN first_purchase AS fp
+  ON b.customer_unique_id = fp.customer_unique_id
+  WHERE b.order_month IN (DATE '2017-10-01', DATE '2017-11-01')
+)
+SELECT 
+  order_month,
+  customer_state,
+  COUNT(DISTINCT customer_unique_id) AS new_customers_state,
+  COUNT(DISTINCT order_id) AS new_orders_state,
+  SUM(GMV_defined) AS GMV_state,
+  SAFE_DIVIDE(SUM(GMV_defined), COUNT(DISTINCT order_id)) AS AOV
+FROM tagged
+WHERE customer_type = 'NEW'
+GROUP BY order_month,customer_state
+ORDER BY order_month,new_orders_state DESC
+
+
+
+
